@@ -1,0 +1,104 @@
+{
+  "name": "STF TIP Information",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nMy name is Javed. How can I assist you today?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -880,
+        -384
+      ],
+      "id": "f9a89174-6c23-4aae-b2c9-2b96dfcb8187",
+      "name": "When chat message received",
+      "webhookId": "c3ac0ef2-b5a4-48f6-bb97-6349956649de"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1E3z5p7-NSCsWXorP6ZcPZCzhiHlRaK7Kuy9mYhzd7Sw/edit?invite=COqQlp8L&gid=1363514854#gid=1363514854",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Form responses 1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -656,
+        -384
+      ],
+      "id": "0f5ba33e-8eac-464a-ba42-885832434292",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "oHTFnaXwNsKn76e9",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 🔹 Final result array\nconst results = [];\n\n// 🔹 Loop through ALL rows\nfor (const item of items) {\n  const row = item.json;\n\n  // 🔹 Helper for complex / multiline headers\n  function getByIncludes(keyword) {\n    const key = Object.keys(row).find(k =>\n      k.replace(/\\s+/g, \" \").includes(keyword)\n    );\n    return key ? row[key] : \"\";\n  }\n\n  // 🔹 Push structured data for each row\n  results.push({\n    RowNumber: row.row_number,\n    TipDate: row[\"Column 1\"],\n\n    ReporterEmailAddress: row[\"Email address\"],\n    ReporterName: row[\"NAME (नाम)\"],\n    ReporterFatherName: row[\"Father’s Name ( पिता का नाम)\"],\n    ReporterAddress: row[\"Address (पता)\"],\n    ReporterMobileNumber: row[\"Mobile Number ( मोबाइल नंबर)\"],\n    ReporterEmailId: row[\"Email ID ( ईमेल आईडी)\"],\n\n    CrimeCategory: getByIncludes(\"II. CATEGORY OF CRIME\"),\n    SpecificAddress: row[\"Specific Address (सटीक पता)\"],\n    CityTownVillage: row[\"City शहर/Town कस्बा/Village गांव\"],\n    State: row[\"State (राज्य)\"],\n    District: row[\"District (जिला)\"],\n    PinCode: row[\"Pin Code पिनकोड (if known/यदि ज्ञात हो)\"],\n\n    SuspectName: row[\"Name (नाम)\"],\n    SuspectFatherName: row[\"Father's Name (पिता का नाम)\"],\n    SuspectMotherName: row[\"Mother's Name (माता का नाम)\"],\n    SuspectAliasOrNickname: row[\"Alias/Nickname उपनाम (if any/यदि कोई हो)\"],\n    \n    SuspectPhoneNumber: row[\"Phone Number (फोननंबर)\"],\n    SuspectPersonalIdNumbers: row[\"Personal ID Numbers पहचानसंख्या (if any/यदिकोईहो)\"],\n    SuspectResidentialAddress: row[\"Residential Address (निवास पता)\"],\n\n    GangAffiliation: row[\"Gang Affiliation (गैंग का नाम)\"],\n    WhatsAppNumber: row[\"WhatsApp Number (व्हाट्सएप नंबर)\"],\n    TelegramHandle: row[\"Telegram Handle (टेलीग्राम हैंडल)\"],\n    InstagramId: row[\"Instagram ID (इंस्टाग्राम आईडी)\"],\n    FacebookId: row[\"Facebook ID (फेसबुक आईडी)\"],\n    SnapchatId: row[\"Snapchat ID (स्नैपचैट आईडी)\"],\n\n    OtherEncryptedApps: row[\"Signal सिग्नल/ Zangi  ज़ैंगी/ Other Encrypted Apps अन्य एन्क्रिप्टेड ऐप्स\"],\n    EncryptedAppsDetails: getByIncludes(\"Encrypted\"),\n    SocialMediaProfileLinks: getByIncludes(\"Social Media Profile Links\"),\n\n    ScreenshotsChatLogsPosts: getByIncludes(\"Screenshots\"),\n    FinancialTransactionDetails: getByIncludes(\"Financial Transaction Details\"),\n    VideoRecordingsOrCctvClips: row[\"Video Recordings वीडियो रिकॉर्डिंग / CCTV Clips सीसीटीवी फुटेज\"],\n    AudioRecordings: row[\"Audio Recordings  (ऑडियो रिकॉर्डिंग)\"],\n    ScreenshotsOfChatsPostsImages: getByIncludes(\"Screenshots (of chats/posts/images)\"),\n    DocumentsOrIdProof: getByIncludes(\"Documents/ID proof related to suspect\"),\n    VehicleOrPropertyDetails: row[\"Vehicle वाहन/Property Details संपत्ति की जानकारी\"],\n    OtherMaterials: row[\"Other Materials  अन्य सामग्री (specify/स्पष्टकरें)\"],\n    BriefDescription: row[\"(Please describe briefly what you know – Max. 500 words / कृपया संक्षेप में विवरण दें – अधिकतम 500 शब्द)\"],\n    Remark: row[\"Column 37\"]\n  });\n}\n\n// ?? Take last 10, then remove last 2 from them\nconst finalRecords = results.slice(-10, -2);\n\nreturn [{\n  json: {\n    total_records: finalRecords.length,\n    records: finalRecords\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -384
+      ],
+      "id": "c2316dc0-191b-4703-84ab-f77dbc81010a",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6d1b95f5-22b2-4400-9ed1-92e067f11252",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc8ea56a9f77461efdbaf4ab14000fda259d6eb0a0ad047cd98c8f84ded3bdb0"
+  },
+  "id": "qBCyJqGpD95YjZ6l",
+  "tags": []
+}

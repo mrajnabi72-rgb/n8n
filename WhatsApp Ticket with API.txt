@@ -1,0 +1,130 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "WhatsApp Ticket with API",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4737074d-9ada-47a5-8e0f-81f25167c4a3",
+      "name": "Received message WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -3792,
+        -2752
+      ],
+      "webhookId": "7281248c-e294-4b51-b151-30609b324a88"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -2480,
+        -2752
+      ],
+      "id": "de8658cf-9e27-4ca8-bf59-efeced0f2f61",
+      "name": "Respond to WhatsApp"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://query.invadertech.com/prod/QueryService.svc/AddTicketWA",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sessionId\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.sessionId) }},\n  \"displayName\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.displayName) }},\n  \"isGroup\": {{ $('Received message WhatsApp').item.json.body.isGroup || false }},\n  \"sender\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.sender) }},\n  \"replyTo\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.replyTo) }},\n  \"groupId\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.groupId || null) }},\n  \"groupName\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.groupName || null) }},\n  \"timestamp\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.timestamp) }},\n  \"type\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.type) }},\n  \"message\": {{ JSON.stringify($('Received message WhatsApp').item.json.body.message || \"\") }},\n  \"media\": null,\n  \"mimeType\": {{ JSON.stringify($json.mediaUrl?.mimeType || null) }},\n  \"fileName\": {{ JSON.stringify($json.mediaUrl?.fileName || null) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -3136,
+        -2752
+      ],
+      "id": "f37b0e1a-01e7-4aec-adc4-9263b2c79377",
+      "name": "Live Query Ticket"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first()?.json || {};\nconst body = data.body || data || {};\n\n// =====================\n// READ MESSAGE\n// =====================\nconst rawText =\n  body.message ??\n  body.text ??\n  body.chatInput ??\n  \"\";\n\nconst message = String(rawText).trim().toLowerCase();\n\n// =====================\n// MEDIA DETECTION\n// =====================\nconst hasMedia =\n  body.type === \"image\" ||\n  body.type === \"video\" ||\n  body.type === \"audio\" ||\n  body.type === \"document\" ||\n  body.type === \"pdf\" ||\n  body.media !== null ||\n  body.mediaUrl !== undefined;\n\nconst mediaType = body.type || \"unknown\";\nconst mediaUrl = body.mediaUrl || body.media || null;\nconst fileName = body.fileName || null;\n\n// =====================\n// PROBLEM KEYWORDS\n// =====================\nconst problemKeywords = [\n  \"invader technology pvt.ltd.\",\n  \"invader technologies pvt. ltd\",\n  \"Invader Technologies Private Limited\",\n  \"problem\",\"issue\",\"error\", \"not transfer\",\n  \"not found\",\"not connected\",\"not working\",\"failed\",\n  \"unable\",\"can't\",\"cannot\",\"complaint\",\"help\",\n  \"support\",\"crash\",\"slow\",\"down\",\n  \"app not opening\",\"app crash\",\"system error\",\n  \"page not loading\", \"not registered\", \"screen stuck\",\"frozen\",\n  \"server error\",\"timeout\",\"something went wrong\",\n  \"solve\",\n\n  \"login issue\",\"login failed\",\"unable to login\",\n  \"account issue\",\"account blocked\",\"account suspended\",\n  \"password issue\",\"forgot password\",\"otp issue\",\n\n  \"payment issue\",\"payment failed\",\"payment pending\",\n  \"amount deducted\",\"double payment\",\"refund\",\n  \"refund pending\",\"billing issue\",\"transaction failed\",\n\n  \"internet issue\",\"network issue\",\"no internet\",\n  \"connection problem\",\"slow internet\",\n\n  \"file not uploading\",\"upload failed\",\n  \"download issue\",\"file missing\",\"file corrupted\",\n\n  \"slow response\",\"lag\",\"delay\",\"taking too long\",\n  \"technical issue\",\"service down\",\"not responding\",\n  \"error message\",\"issue persists\",\n\n  // Hindi\n  \"काम नहीं कर रहा\",\"नहीं हो रहा\",\"नहीं चल रहा\",\n  \"बंद हो गया\",\"लॉगिन नहीं हो रहा\",\n  \"पेमेंट फेल\",\"रिफंड नहीं मिला\",\n  \"नेटवर्क नहीं आ रहा\",\"सर्वर डाउन\",\n  \"ऐप नहीं चल रही\",\"ओटीपी नहीं आ रहा\",\n  \"सिस्टम एरर\",\"पेज लोड नहीं हो रहा\", \n  \"सेवा\", \"इनवेडर टेक्नोलॉजी प्राइवेट लिमिटेड\", \"इन्वाडर टेक्नोलोजिस प्रा. लि\", \"इनवेडर टैक्जोलोच्लिज प्राईवेट लिमिटेड\", \"इनबडेर टेक्नॉलाजी प्रा. लि.\", \"इन्वेडर\", \"काम नहीं कर रहा\", \"काम नहीं कर रही\", \"नहीं हो रहा\", \"नहीं हो पा रहा\", \"नहीं हो रही\", \"नहीं चल रहा\", \"नहीं चल रही\", \"बंद हो गया\", \"बंद हो गई\", \"लॉगिन नहीं हो रहा\", \"भुगतान नहीं हो रहा\", \"पेमेंट फेल\", \"रिफंड नहीं मिला\", \"पैसे कट गए\", \"राशि कट गई\", \"नेटवर्क नहीं आ रहा\", \"इंटरनेट नहीं चल रहा\", \"सर्वर डाउन\", \"ऐप नहीं खुल रही\", \"ऐप नहीं चल रही\", \"ओटीपी नहीं आ रहा\", \"खाता ब्लॉक हो गया\", \"पासवर्ड गलत\", \"लेनदेन असफल\", \"सिस्टम एरर\", \"पेज लोड नहीं हो रहा\", \"स्क्रीन फ्रीज\", \"समाधान\"\n];\n\n// =====================\n// TIME + TICKET\n// =====================\nconst now = new Date();\n\nconst createdAt = now.toLocaleString(\"en-IN\", {\n  timeZone: \"Asia/Kolkata\",\n  day: \"2-digit\",\n  month: \"short\",\n  year: \"numeric\",\n  hour: \"2-digit\",\n  minute: \"2-digit\",\n  second: \"2-digit\",\n  hour12: true,\n});\n\nconst ticketNo = `TK_NO-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,\"0\")}${String(now.getDate()).padStart(2,\"0\")}-${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;\n\n// =====================\n// RESPONSE FORMAT\n// =====================\nfunction response(data) {\n  return [{\n    json: {\n      reply: true,\n      type: data.type || null,\n      ticket: data.ticket || null,\n      ticketStatus: data.ticketStatus || null,\n      userIssue: data.userIssue || null,\n      mediaType: data.mediaType || null,\n      mediaUrl: data.mediaUrl || null,\n      fileName: data.fileName || null,\n      createdAt: data.createdAt || null,\n      message: data.message || null\n    }\n  }];\n}\n\n// =====================\n// CHECK PROBLEM\n// =====================\nconst isProblem = problemKeywords.some(k =>\n  message.includes(k)\n);\n\n// =====================\n// MEDIA LOGIC\n// =====================\nif (hasMedia) {\n\n  // ✅ Media + Problem → Ticket\n  if (isProblem && message.length > 3) {\n    return response({\n      type: \"CREATE\",\n      ticket: ticketNo,\n      ticketStatus: \"OPEN\",\n      userIssue: message,\n      mediaType,\n      mediaUrl,\n      fileName,\n      createdAt,\n      message:\n        `📎 Media received\\n` +\n        `✅ Ticket Created\\n` +\n        `🎫 ${ticketNo}\\n` +\n        `🕒 ${createdAt}`\n    });\n  }\n\n  // ❌ Media only → NO RESPONSE\n  return [];\n}\n\n// =====================\n// TEXT PROBLEM\n// =====================\nif (isProblem && message.length > 3) {\n  return response({\n    type: \"CREATE\",\n    ticket: ticketNo,\n    ticketStatus: \"OPEN\",\n    userIssue: message,\n    createdAt,\n    message:\n      `✅ Ticket Created\\n` +\n      `🎫 ${ticketNo}\\n` +\n      `🕒 ${createdAt}`\n  });\n}\n\n// =====================\n// DEFAULT → NO RESPONSE\n// =====================\nreturn [];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3472,
+        -2752
+      ],
+      "id": "db83b3c8-84ed-4908-9b9b-5c420cb8d4c2",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n  const res = item.json || {};\n\n  const ticketNo = res.ticket || \"N/A\";\n  const apiMessageRaw = res.message || \"\";\n  const apiMessage = apiMessageRaw.toLowerCase();\n\n  let message = \"\";\n\n  // =====================\n  // EXTRACT ASSIGNED NAME\n  // =====================\n  let assignedTo = \"\";\n\n  const match = apiMessageRaw.match(/assigned to:\\s*([^\\.\\n]+)/i);\n  if (match && match[1]) {\n    assignedTo = match[1].trim();\n  }\n\n  // =====================\n  // ALREADY OPEN CASE\n  // =====================\n  if (apiMessage.includes(\"already\")) {\n\n    message =\n      `Dear Sir,\\n` +\n      `Your request is already open and our team is working on it.\\n\\n` +\n\n      (assignedTo\n        ? `👤 Assigned To: ${assignedTo}\\n`\n        : \"\") +\n\n      `🎫 ${ticketNo}\\n` +\n      `📞 01243511734\\n\\n` +\n      `– Team ITPL`;\n  }\n\n  // =====================\n  // NEW TICKET CASE\n  // =====================\n  else {\n\n    message =\n      `Dear Sir,\\n` +\n      `Your request has been received. Our team is working on it and will get back to you shortly.\\n\\n` +\n      `🎫 ${ticketNo}\\n` +\n      `📞 01243511734\\n\\n` +\n      `– Team ITPL`;\n  }\n\n  return {\n    json: {\n      reply: true,\n      type: \"MESSAGE\",\n      ticket: ticketNo,\n      message: message\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2800,
+        -2752
+      ],
+      "id": "56b07f8d-9a6f-4053-bad0-dfd10f61c4e3",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "connections": {
+    "Received message WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Live Query Ticket": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Live Query Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc8ea56a9f77461efdbaf4ab14000fda259d6eb0a0ad047cd98c8f84ded3bdb0"
+  }
+}

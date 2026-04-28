@@ -1,0 +1,259 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Ai_WhatsApp_Ticket_System",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3af537ca-1232-4f8a-adae-6adc3b765ccb",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        16
+      ],
+      "webhookId": "7c61e98c-8ba6-4e96-959a-6e095754349e"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "b21edbc1-c302-4cde-a0a1-496dbbe71f2b",
+      "name": "Respond Ticket",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "63e415f5-c51b-4373-ada6-bc9b9ab61362",
+      "name": "Respond Reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        320,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://query.invadertech.com/mobile/QueryService.svc/AddTicketWA",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sessionId\": \"{{ $('Webhook').item.json.body.sessionId }}\",\n  \"displayName\": \"{{ $('Webhook').item.json.body.displayName }}\",\n  \"isGroup\": {{ $('Webhook').item.json.body.isGroup }},\n  \"sender\": \"{{ $('Webhook').item.json.body.sender }}\",\n  \"replyTo\": \"{{ $('Webhook').item.json.body.replyTo }}\",\n  \"groupId\": \"{{ $('Webhook').item.json.body.groupId }}\",\n  \"groupName\": \"{{ $('Webhook').item.json.body.groupName }}\",\n  \"timestamp\": \"{{ $('Webhook').item.json.body.timestamp }}\",\n  \"type\": \"{{ $('Webhook').item.json.body.type }}\",\n  \"message\": \"{{ $('Webhook').item.json.body.message }}\",\n  \"media\": null,\n  \"mimeType\": \"{{$json.mediaUrl?.mimeType || null}}\",\n  \"fileName\": \"{{$json.mediaUrl?.fileName || null}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        320,
+        -256
+      ],
+      "id": "dedbf143-b572-4459-a98e-7221ccd8350a",
+      "name": "Live Query Ticket"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        320
+      ],
+      "id": "9a4a1a4c-595d-41e4-a01b-c0feaf088393",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "1IO9GsqSjiBg9IW9",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3c6786fa-9465-4423-b8d1-a7f3b6ff59b5",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "CREATE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -144,
+        16
+      ],
+      "id": "4a316be8-e378-4ccd-b092-2ce25230d381",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "You are a Helpdesk AI.\n\nIMPORTANT RULES:\n- Always return ONLY valid JSON\n- Do NOT wrap JSON inside another JSON\n- Do NOT return stringified JSON\n- Do NOT add backticks or formatting\n- Always follow the exact structure below\n\n----------------------------\n\n1. For normal/greeting messages:\n\n{\n  \"reply\": true,\n  \"type\": \"MESSAGE\",\n  \"ticket\": null,\n  \"ticketStatus\": null,\n  \"userIssue\": null,\n  \"mediaType\": null,\n  \"mediaUrl\": null,\n  \"fileName\": null,\n  \"createdAt\": null,\n  \"message\": \"your reply\"\n}\n\n----------------------------\n\n2. For problems/issues:\n\n{\n  \"reply\": true,\n  \"type\": \"CREATE\",\n  \"ticket\": \"AUTO_GENERATED\",\n  \"ticketStatus\": \"OPEN\",\n  \"userIssue\": \"original user message\",\n  \"mediaType\": \"if available else null\",\n  \"mediaUrl\": \"if available else null\",\n  \"fileName\": \"if available else null\",\n  \"createdAt\": \"AUTO_TIME\",\n  \"message\": \"confirmation message with ticket number\"\n}\n\n----------------------------\n\nDetection Rules:\n\n- Greeting:\n  hi, hello, hey, good morning → MESSAGE\n\n- Problem:\n  error, issue, not working, failed, unable → CREATE\n\n- If media is present + problem → CREATE ticket with media info\n\n- If media only (no issue) → MESSAGE asking user to describe issue\n\n----------------------------\n\nResponse Guidelines:\n\n- Keep replies short and professional\n- Do not generate ticket for greetings\n- Always include all fields in response\n- Never skip fields\n- Use null where data is not available\n\n----------------------------"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -848,
+        16
+      ],
+      "id": "9b4670d5-d87b-4fc1-a150-7fc147f793a4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n  // =====================\n  // INPUT\n  // =====================\n  const body = item.json.body || item.json || {};\n\n  const rawText =\n    body.message ??\n    body.text ??\n    body.chatInput ??\n    \"\";\n\n  const message = String(rawText).trim();\n  const text = message.toLowerCase();\n\n  // =====================\n  // AI OUTPUT\n  // =====================\n  let ai = {};\n  try {\n    ai = JSON.parse(item.json.output || \"{}\");\n  } catch (e) {}\n\n  let aiType = ai.type || null;\n  let aiMessage = ai.message || null;\n\n  // Fix double JSON\n  if (typeof aiMessage === \"string\") {\n    try {\n      const inner = JSON.parse(aiMessage);\n      if (inner.message) aiMessage = inner.message;\n    } catch {}\n  }\n\n  // =====================\n  // MEDIA\n  // =====================\n  const mediaType = body.type || null;\n  const mediaUrl = body.mediaUrl || body.media || null;\n  const fileName = body.fileName || null;\n\n  const hasMedia = !!(mediaType || mediaUrl);\n\n  // =====================\n  // KEYWORDS\n  // =====================\n  const greetings = [\"hi\",\"hello\",\"hey\",\"hii\",\"good morning\",\"good evening\"];\n  const thanksWords = [\"thanks\",\"thank you\",\"ok\",\"fine\",\"👍\",\"🙏\"];\n\n  const problemKeywords = [\n    \"problem\",\"issue\",\"error\",\"not working\",\"failed\",\n    \"unable\",\"can't\",\"complaint\",\"support\",\"crash\",\n    \"slow\",\"down\",\"not opening\",\"server error\",\n    \"login issue\",\"payment failed\",\"refund\",\n    \"काम नहीं कर रहा\",\"नहीं हो रहा\"\n  ];\n\n  const isGreeting = greetings.some(g => text.startsWith(g));\n  const isThanks = thanksWords.some(w => text.includes(w));\n  const keywordProblem = problemKeywords.some(k => text.includes(k));\n\n  // =====================\n  // FINAL DECISION\n  // =====================\n  let finalType = \"MESSAGE\";\n\n  if (aiType === \"CREATE\") {\n    finalType = \"CREATE\";\n  } else if (aiType === \"MESSAGE\") {\n    finalType = \"MESSAGE\";\n  } else {\n    if (keywordProblem) finalType = \"CREATE\";\n    else if (isGreeting || isThanks) finalType = \"MESSAGE\";\n  }\n\n  // =====================\n  // MEDIA LOGIC\n  // =====================\n  if (hasMedia) {\n\n    if (aiType === \"CREATE\") {\n      finalType = \"CREATE\";\n    }\n\n    else if (message.length > 3 && keywordProblem) {\n      finalType = \"CREATE\";\n    }\n\n    else {\n      return {\n        json: {\n          reply: true,\n          type: \"MESSAGE\",\n          mediaType,\n          mediaUrl,\n          fileName,\n          message: \"📸 Image received. Please describe your issue.\"\n        }\n      };\n    }\n  }\n\n  // =====================\n  // TIME + TICKET\n  // =====================\n  const now = new Date();\n\n  const createdAt = now.toLocaleString(\"en-IN\", {\n    timeZone: \"Asia/Kolkata\"\n  });\n\n  const ticketNo = `TK_NO-${now.getTime()}`;\n\n  // =====================\n  // STATUS CHECK\n  // =====================\n  const ticketMatch = text.match(/tk_no-\\d+/i);\n  if (ticketMatch) {\n    return {\n      json: {\n        reply: true,\n        type: \"STATUS\",\n        ticket: ticketMatch[0].toUpperCase(),\n        message: `🔍 Checking status for ticket ${ticketMatch[0].toUpperCase()}`\n      }\n    };\n  }\n\n  // =====================\n  // CREATE TICKET\n  // =====================\n  if (finalType === \"CREATE\") {\n    return {\n      json: {\n        reply: true,\n        type: \"CREATE\",\n        ticket: ticketNo,\n        ticketStatus: \"OPEN\",\n        userIssue: message || \"User reported issue\",\n        mediaType,\n        mediaUrl,\n        fileName,\n        createdAt,\n        message:\n          `🎫 Ticket: ${ticketNo}\\n` +\n          `✅ Issue received.\\n` +\n          `📞 Support team will contact you soon.`\n      }\n    };\n  }\n\n  // =====================\n  // NORMAL RESPONSE\n  // =====================\n  let replyText =\n    aiMessage ||\n    (isGreeting\n      ? \"👋 Hello! How can I assist you today?\"\n      : isThanks\n      ? \"😊 You're welcome! Let me know if you need help.\"\n      : \"Please describe your issue so I can help you.\");\n\n  return {\n    json: {\n      reply: true,\n      type: \"MESSAGE\",\n      message: replyText\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        16
+      ],
+      "id": "17ac91ab-10fd-4892-840f-dd1110b38f0c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n\n  const res = item.json || {};\n\n  const ticketNo = res.ticket || \"N/A\";\n  const apiMessageRaw = res.message || \"\";\n  const apiMessage = apiMessageRaw.toLowerCase();\n\n  let message = \"\";\n\n  // =====================\n  // EXTRACT ASSIGNED NAME\n  // =====================\n  let assignedTo = \"\";\n\n  const match = apiMessageRaw.match(/assigned to:\\s*([^\\.\\n]+)/i);\n  if (match && match[1]) {\n    assignedTo = match[1].trim();\n  }\n\n  // =====================\n  // ALREADY OPEN CASE\n  // =====================\n  if (apiMessage.includes(\"already\")) {\n\n    message =\n      `Dear Sir,\\n` +\n      `Your request is already open and our team is working on it.\\n\\n` +\n\n      (assignedTo\n        ? `👤 Assigned To: ${assignedTo}\\n`\n        : \"\") +\n\n      `🎫 ${ticketNo}\\n` +\n      `📞 01243511734\\n\\n` +\n      `– Team ITPL`;\n  }\n\n  // =====================\n  // NEW TICKET CASE\n  // =====================\n  else {\n\n    message =\n      `Dear Sir,\\n` +\n      `Your request has been received. Our team is working on it and will get back to you shortly.\\n\\n` +\n      `🎫 ${ticketNo}\\n` +\n      `📞 01243511734\\n\\n` +\n      `– Team ITPL`;\n  }\n\n  return {\n    json: {\n      reply: true,\n      type: \"MESSAGE\",\n      ticket: ticketNo,\n      message: message\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        16
+      ],
+      "id": "0b793282-5338-40cb-8da4-be2bf1fc6143",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond Reply": {
+      "main": [
+        []
+      ]
+    },
+    "Live Query Ticket": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Live Query Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc8ea56a9f77461efdbaf4ab14000fda259d6eb0a0ad047cd98c8f84ded3bdb0"
+  }
+}
